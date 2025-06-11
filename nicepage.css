@@ -46066,6 +46066,7 @@ a.u-link.u-text-hover-color-var:hover {
 /*end-variables sitestylecss*/
  .u-header {
   background-image: none;
+  
 }
 
 .u-header .u-sheet-1 {
@@ -46105,31 +46106,21 @@ a.u-link.u-text-hover-color-var:hover {
 
  .u-footer {
   background-image: none;
+  
+  min-height: 122px;
 }
 
-.u-footer .u-sheet-1 {
-  min-height: 120px;
+.u-footer .u-btn-1 {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 80px 0 0 auto;
+  padding: 10px 0;
 }
-@media (max-width: 1199px) {
-  .u-footer .u-sheet-1 {
-    min-height: 99px;
-  }
-}
-@media (max-width: 991px) {
-  .u-footer .u-sheet-1 {
-    min-height: 76px;
-  }
-}
-@media (max-width: 767px) {
-  .u-footer .u-sheet-1 {
-    min-height: 57px;
-  }
-}
-@media (max-width: 575px) {
-  .u-footer .u-sheet-1 {
-    min-height: 36px;
-  }
-}
+
+
+
+
 
  /*begin-variables base-font-size*/ 
  html { font-size: 16px; }
