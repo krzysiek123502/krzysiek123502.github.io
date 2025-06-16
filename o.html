@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Przeglądarka Plików GitHub</title>
+    <!-- Dołącz Tailwind CSS dla łatwego stylowania -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4 font-sans">
+    <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-2xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-gray-800">Przeglądarka Plików</h1>
+
+        <div class="mb-4 flex items-center justify-between">
+            <p class="text-lg text-gray-600">
+                Ścieżka: <span id="current-path" class="font-semibold text-blue-600">/</span>
+            </p>
+            <button id="go-back"
+                class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75"
+                style="display: none;">
+                &larr; Powrót
+            </button>
+        </div>
+
+        <ul id="file-list" class="space-y-2 text-gray-700">
+            <!-- Tutaj będą ładowane pliki i katalogi -->
+            <li class="text-center py-4 text-gray-500">Ładowanie plików...</li>
+        </ul>
+
+        <div id="error-message" class="text-red-600 text-center mt-4 hidden"></div>
+    </div>
+
+    <script>
+        // WAŻNE: Zastąp swoim loginem na GitHubie
+        const owner = 'krzysiek123502';
+        // WAŻNE: Zastąp nazwą swojego repozytorium
+        const repo = 'krzysiek123502';
+
+        const fileList = document.getElementById('file-list');
+        const currentPathSpan = document.getElementById('current-path');
+        const goBackButton = document.getElementById('go-back');
+        const errorMessageDiv = document.getElementById('error-message');
+
+        let currentPath = ''; // Aktualna ścieżka w repozytorium
+
+        /**
+         * Funkcja pomocnicza do wyświetlania wiadomości
+         * @param {string} message - Wiadomość do wyświetlenia
+         * @param {boolean} isError - Czy to jest wiadomość o błędzie
+         */
+        function displayMessage(message, isError = false) {
+            fileList.innerHTML = ''; // Wyczyść listę
+            errorMessageDiv.textContent = ''; // Wyczyść poprzednie błędy
+
+            const messageElement = document.createElement('li');
+            messageElement.classList.add('text-center', 'py-4');
+            if (isError) {
+                errorMessageDiv.textContent = message;
+                errorMessageDiv.classList.remove('hidden');
+            } else {
+                messageElement.classList.add('text-gray-500');
+                messageElement.textContent = message;
+                fileList.appendChild(messageElement);
+                errorMessageDiv.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Pobiera zawartość katalogu z GitHub API i wyświetla ją.
+         * @param {string} path - Ścieżka katalogu do pobrania.
+         */
+        async function fetchFiles(path) {
+            displayMessage('Ładowanie plików...');
+            currentPathSpan.textContent = path === '' ? '/' : `/${path}`;
+            goBackButton.style.display = path === '' ? 'none' : 'inline-block';
+
+            try {
+                // Używamy GitHub API do pobrania zawartości katalogu
+                const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Obsługa błędów z API
+                    if (response.status === 404) {
+                        displayMessage('Katalog pusty lub nie istnieje.', true);
+                    } else {
+                        displayMessage(`Wystąpił błąd: ${data.message || response.statusText}`, true);
+                    }
+                    return;
+                }
+
+                if (!Array.isArray(data)) {
+                    displayMessage('Nieoczekiwana odpowiedź z API GitHub.', true);
+                    console.error('Expected array, got:', data);
+                    return;
+                }
+
+                fileList.innerHTML = ''; // Wyczyść poprzednią listę
+
+                if (data.length === 0) {
+                    displayMessage('Katalog jest pusty.');
+                    return;
+                }
+
+                // Sortowanie: katalogi najpierw, potem pliki, alfabetycznie
+                data.sort((a, b) => {
+                    if (a.type === 'dir' && b.type === 'file') return -1;
+                    if (a.type === 'file' && b.type === 'dir') return 1;
+                    return a.name.localeCompare(b.name);
+                });
+
+                data.forEach(item => {
+                    const listItem = document.createElement('li');
+                    const link = document.createElement('a');
+
+                    link.textContent = item.name;
+                    link.classList.add('flex', 'items-center', 'gap-2', 'p-2', 'rounded-md', 'hover:bg-gray-200', 'transition-colors', 'duration-200', 'cursor-pointer');
+
+                    if (item.type === 'dir') {
+                        // Jeśli to katalog, dodaj ikonę folderu i obsłuż kliknięcie do nawigacji
+                        listItem.classList.add('folder');
+                        link.innerHTML = `<svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h4l2 2h4a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>${item.name}`;
+                        link.href = '#'; // Link zostanie obsłużony przez JS
+                        link.onclick = (e) => {
+                            e.preventDefault(); // Zapobiegaj domyślnej akcji linku
+                            currentPath = path ? `${path}/${item.name}` : item.name;
+                            fetchFiles(currentPath);
+                        };
+                    } else {
+                        // Jeśli to plik, dodaj ikonę pliku i link do pobrania/otwarcia
+                        listItem.classList.add('file');
+                        link.innerHTML = `<svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1-3a1 1 0 100 2h6a1 1 0 100-2H7zm0 6a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>${item.name}`;
+                        link.href = item.download_url || item.html_url; // Użyj download_url, jeśli dostępny, w przeciwnym razie html_url
+                        link.target = "_blank"; // Otwórz w nowej karcie
+                        link.rel = "noopener noreferrer"; // Dobre praktyki bezpieczeństwa
+                    }
+                    listItem.appendChild(link);
+                    fileList.appendChild(listItem);
+                });
+
+            } catch (error) {
+                displayMessage('Wystąpił błąd podczas pobierania danych: ' + error.message, true);
+                console.error('Error fetching files:', error);
+            }
+        }
+
+        // Obsługa przycisku "Powrót"
+        goBackButton.onclick = () => {
+            const pathParts = currentPath.split('/');
+            pathParts.pop(); // Usuń ostatni element (bieżący katalog)
+            currentPath = pathParts.join('/');
+            fetchFiles(currentPath);
+        };
+
+        // Początkowe ładowanie plików po załadowaniu strony
+        window.onload = function() {
+            fetchFiles(currentPath);
+        };
+    </script>
+</body>
+</html>
