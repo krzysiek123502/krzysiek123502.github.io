@@ -121,6 +121,17 @@
                     return a.name.localeCompare(b.name);
                 });
 
+                // Określenie bazowego URL dla GitHub Pages
+                let githubPagesBaseUrl;
+                if (repo === `${owner}.github.io`) {
+                    // Dla stron użytkowników/organizacji (np. krzysiek123502.github.io)
+                    githubPagesBaseUrl = `https://${owner}.github.io/`;
+                } else {
+                    // Dla stron projektów (np. krzysiek123502.github.io/nazwa-repozytorium)
+                    githubPagesBaseUrl = `https://${owner}.github.io/${repo}/`;
+                }
+
+
                 data.forEach(item => {
                     const listItem = document.createElement('li');
                     const link = document.createElement('a');
@@ -139,10 +150,13 @@
                             fetchFiles(currentPath);
                         };
                     } else {
-                        // Jeśli to plik, dodaj ikonę pliku i link do pobrania/otwarcia
+                        // Jeśli to plik, dodaj ikonę pliku i link do odpowiedniej strony GitHub Pages
                         listItem.classList.add('file');
                         link.innerHTML = `<svg class="w-5 h-5 text-gray-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1-3a1 1 0 100 2h6a1 1 0 100-2H7zm0 6a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path></svg>${item.name}`;
-                        link.href = item.download_url || item.html_url; // Użyj download_url, jeśli dostępny, w przeciwnym razie html_url
+                        
+                        // Zmiana tutaj: tworzenie linku do GitHub Pages
+                        link.href = `${githubPagesBaseUrl}${item.path}`; 
+                        
                         link.target = "_blank"; // Otwórz w nowej karcie
                         link.rel = "noopener noreferrer"; // Dobre praktyki bezpieczeństwa
                     }
